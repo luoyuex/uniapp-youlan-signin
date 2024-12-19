@@ -90,21 +90,12 @@
 			}
 		},
 		watch: {
-			already(v) {
-				console.log(this.localDate);
-				for (let i in this.dayArr) {
-					if(v.indexOf(new Date(this.dayArr[i].date).getTime()) == -1) {
-						this.$set(this.dayArr[i], 'flag', false);
-					}else {
-						this.$set(this.dayArr[i], 'flag', true);
-						if(this.dayArr[i].date == this.localDate) {
-							// 今天已经签到了
-							this.is_day_signin = true;
-						}
-						console.log(this.dayArr[i]);
-					}
-					
-				}
+			already: {
+				handler(v) {
+				  this.getAlready();
+				},
+				immediate: true, // 第一次赋值时触发
+				deep: true // 深度监听
 			}
 		},
 		data() {
@@ -143,6 +134,20 @@
 			}
 		},
 		methods: {
+			// 渲染已经签到的日期
+			getAlready() {
+				for (let i in this.dayArr) {
+					if(this.already.indexOf(new Date(this.dayArr[i].date).getTime()) == -1) {
+						this.$set(this.dayArr[i], 'flag', false);
+					}else {
+						this.$set(this.dayArr[i], 'flag', true);
+						if(this.dayArr[i].date == this.localDate) {
+							// 今天已经签到了
+							this.is_day_signin = true;
+						}
+					}
+				}
+			},
 			// 补签触发的方法
 			shift() {
 				this.$emit('shift')
@@ -222,6 +227,9 @@
 					// 补充后面空白日期
 					if (i == totalDay && value != 6) that.addAfter(value);
 				}
+				
+				// 解决月份切换后，已签到部分不显示的问题（感谢社区网友提供的方案 @w的多多）
+				this.getAlready();
 			},
 			// 补充前面空白日期
 			addBefore(value) {

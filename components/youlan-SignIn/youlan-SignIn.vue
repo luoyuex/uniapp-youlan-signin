@@ -113,7 +113,9 @@
 				prv: true,
 				next: true,
 				// 判断今天是否已经签到
-				is_day_signin: false
+				is_day_signin: false,
+				// 已经签到的日期
+				already_arr: []
 			}
 		},
 		mounted() {
@@ -134,10 +136,15 @@
 			}
 		},
 		methods: {
+			setAlready(days) {
+				this.already_arr = days;
+				this.getAlready();
+			},
 			// 渲染已经签到的日期
 			getAlready() {
 				for (let i in this.dayArr) {
-					if(this.already.indexOf(new Date(this.dayArr[i].date).getTime()) == -1) {
+					if(this.already.indexOf(new Date(this.dayArr[i].date).getTime()) == -1 && this.already_arr.indexOf(new Date(this.dayArr[i].date).getTime()) == -1) {
+						console.log(this.already_arr.indexOf(new Date(this.dayArr[i].date).getTime()) == -1)
 						this.$set(this.dayArr[i], 'flag', false);
 					}else {
 						this.$set(this.dayArr[i], 'flag', true);
@@ -147,6 +154,7 @@
 						}
 					}
 				}
+				console.log(this.dayArr)
 			},
 			// 补签触发的方法
 			shift() {
@@ -333,6 +341,11 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
+	}
+	
+	.week, .day {
+		display: grid;
+		grid-template-columns: repeat(7, 1fr); /* 一行7列，每列等宽 */
 	}
 	
 	.month,

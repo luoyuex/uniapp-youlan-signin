@@ -79,6 +79,7 @@ methods: {
 |----|----|----|
 |change|用户点击签到时触发|返回签到日期|
 |shift|点击右上角补签按钮触发|无|
+|setAlready|设置签到的日期，和already属性功能一样|无|
 
 
 ## 演示案例
@@ -97,12 +98,12 @@ methods: {
 		components: {
 			youlanSignIn
 		},
-		onLoad() {
-			this.historysigncount()
-			this.gettask()
-		},
 		mounted() {
 			this.historysign()
+			// 模拟设置签到日期
+			setTimeout(() => {
+				this.setAlready();
+			}, 2000)
 		},
 		data() {
 			return {
@@ -116,22 +117,51 @@ methods: {
 			shift() {
 				console.log('用户点击了补签按钮');
 			},
+			setAlready() {
+				// 通过方法设置已经签到的日期
+				const res = {
+					code: 200,
+					data: {
+						"2025-06-01": "0",
+						"2025-06-02": "1",
+						"2025-06-03": "1",
+						"2025-06-04": "0",
+						"2025-06-05": "0",
+					}
+				}
+				const days = []
+				if (res.code == 200) {
+					for (const i in res.data) {
+						if (res.data[i] == "1") {
+							console.log(i);
+							days.push(new Date(i).getTime())
+						}
+					}
+				
+					console.log(days);
+				} else this.$refs.uToast.show({
+					title: '获取签到信息失败',
+					type: 'error',
+				})
+				// console.log('days' + days)
+				this.$refs.youlanSignInRef.setAlready(days);
+			},
 			async historysign() {
 				this.data = []
 				const res = {
 					code: 200,
 					data: {
-						"2024-09-01": "0",
-						"2024-09-02": "1",
-						"2024-09-03": "1",
-						"2024-09-04": "0",
-						"2024-09-05": "0",
-						"2024-09-06": "0",
-						"2024-09-07": "0",
-						"2024-09-08": "0",
-						"2024-09-09": "0",
-						"2024-09-10": "0",
-						"2024-09-31": "1",
+						"2025-05-01": "0",
+						"2025-05-02": "1",
+						"2025-05-03": "1",
+						"2025-05-04": "0",
+						"2025-05-05": "0",
+						"2025-05-06": "0",
+						"2025-05-07": "0",
+						"2025-05-08": "0",
+						"2025-05-09": "0",
+						"2025-05-10": "0",
+						"2025-05-31": "1",
 					}
 				}
 

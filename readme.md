@@ -19,6 +19,8 @@ components: {
     :isIntegral="isIntegral" 
     :checkinDays="checkinDays" 
     :already="data" 
+	ref="youlanSignInRef"
+    :darkMode="darkMode"
     type="sign" 
     lang="zh" 
     @change="signDate" 
@@ -31,6 +33,7 @@ data() {
         checkinDays: 0,     // 连续签到天数
         integral: 0,        // 本次签到获取的积分
         isIntegral: false,  // 是否显示签到积分模块
+        darkMode: false,    // 是否开启暗黑模式
     }
 }
 
@@ -72,6 +75,7 @@ methods: {
 |integral|Number/String|否|0	|显示本次签到获取的积分|
 |isIntegral|Boolean|否|false|true/false|是否显示积分模块|
 |signin_but_bg|String|否|#909399|rgb/rgba/十六进制|不能签到时签到按钮的颜色|
+|darkMode|Boolean|否|false|true/false|是否开启暗黑模式|
 
 ## 方法
 
@@ -86,8 +90,8 @@ methods: {
 ```js
 <template>
 	<view>
-		<youlanSignIn @shift="shift" :integral="integral" :isIntegral="isIntegral" :checkinDays="checkinDays" :already="data"
-			:supplementary="true" type="sign" lang="zh" @changeMonth="historysign" @change="signDate" />
+		<youlanSignIn ref="youlanSignInRef" @shift="shift" :integral="integral" :isIntegral="isIntegral" :checkinDays="checkinDays" :already="data"
+			:supplementary="true" :darkMode="darkMode" type="sign" lang="zh" @changeMonth="historysign" @change="signDate" />
 
 	</view>
 </template>
@@ -110,7 +114,8 @@ methods: {
 				data: [],
 				checkinDays: 0, // 连续签到天数
 				integral: 0, // 本次签到获取的积分
-				isIntegral: false, // 是否显示签到积分模块	
+				isIntegral: false, // 是否显示签到积分模块
+				darkMode: false, // 是否开启暗黑模式
 			};
 		},
 		methods: {
@@ -189,3 +194,45 @@ methods: {
 	}
 </script>
 ```
+
+## 暗黑模式使用说明
+
+组件支持暗黑模式，通过 `darkMode` 参数控制：
+
+### 基本用法
+```html
+<!-- 浅色模式（默认） -->
+<youlanSignIn :darkMode="false" />
+
+<!-- 暗黑模式 -->
+<youlanSignIn :darkMode="true" />
+```
+
+### 动态切换示例
+```js
+data() {
+    return {
+        darkMode: false, // 主题模式
+    }
+},
+methods: {
+    // 切换主题模式
+    toggleTheme() {
+        this.darkMode = !this.darkMode;
+    }
+}
+```
+
+
+### 自定义颜色 + 暗黑模式
+```html
+<!-- 暗黑模式下使用自定义主题色 -->
+<youlanSignIn 
+    :darkMode="true" 
+    bgweek="#ff6b6b" 
+    bgday="#4ecdc4" 
+    signin_but_bg="#95a5a6"
+/>
+```
+
+**注意**: 用户自定义的颜色参数优先级更高，会覆盖暗黑模式的默认颜色设置。

@@ -1,27 +1,27 @@
 <template>
-	<view class="calendar-box">
+	<view class="calendar-box" :class="{ 'dark-theme': darkMode }">
 		<view class="top">
 			<view>
 				<h4>已连续签到 <span> {{checkinDays}} </span> 天</h4>
 				<p v-if="isIntegral">今日获得+{{integral}}积分</p>
 			</view>
-			<view class="rig">
+			<view class="right">
 				<span v-if="supplementary" @click="shift">补签</span>
 			</view>
 		</view>
 		<view class="miss_box">
 			<view class="month">
-				<view class="prv" @click="lastMonth">
-					<span v-show="prv">上月</span>
+				<view class="previous" @click="lastMonth">
+					<span v-show="showPrevious">上月</span>
 				</view>
 				<view>{{year}}年{{month}}月</view>
-				<view class="prv" @click="nextMonth">
-					<span v-show="next">下月</span>
+				<view class="previous" @click="nextMonth">
+					<span v-show="showNext">下月</span>
 				</view>
 				<picker v-if="checkDate" class="picker" mode="date" fields="month" @change="changeDate" />
 			</view>
 			<view class="week">
-				<view :style="'color:'+(weeks==weeked?bgweek:'')+';'" v-for="weeks in weekArr">{{weeks}}</view>
+				<view :style="'color:'+(weeks==currentWeek?bgweek:'')+';'" v-for="weeks in weekArr">{{weeks}}</view>
 			</view>
 			<view class="day">
 				<view :class="[{'checkday':days.date==''},{'choose':days.date==localDate || days.flag }]"
@@ -34,8 +34,7 @@
 		</view>
 		<view class="but">
 			
-			<!-- <button :disabled='thisMonth == month ? false : true'  :style="'background:'+(thisMonth == month ? bgday : signin_but_bg)+';'" @click="daySign(dayArr[aheadDay + day - 1])">签到</button> -->
-			<button :disabled='thisMonth == month ? false : true'  :style="'background: ' + (is_day_signin ? signin_but_bg : (thisMonth == month ? bgday : signin_but_bg)) + ';'" @click="daySign(dayArr[aheadDay + day - 1])">签到</button>
+			<button :disabled='currentMonth == month ? false : true'  :style="'background: ' + (isDaySignedIn ? signin_but_bg : (currentMonth == month ? bgday : signin_but_bg)) + ';'" @click="daySign(dayArr[aheadDay + day - 1])">签到</button>
 		</view>
 	</view>
 </template>
@@ -87,6 +86,10 @@
 			isIntegral: {
 				type: Boolean,
 				default: false
+			},
+			darkMode: {
+				type: Boolean,
+				default: false
 			}
 		},
 		watch: {
@@ -100,7 +103,7 @@
 		},
 		data() {
 			return {
-				weeked: '', // 今天周几
+				currentWeek: '', // 今天周几
 				dayArr: [], // 当前月每日
 				localDate: '', // 今天日期
 				day: new Date().getDate(), // 当前日
@@ -108,14 +111,13 @@
 				month: new Date().getMonth() + 1, // 当前月
 				weekArr: ['日', '一', '二', '三', '四', '五', '六'], // 每周
 				aheadDay: 0,	// 前方空白天数数量
-				thisMonth: new Date().getMonth() + 1,
-				// 2023年4月4日11:50:03
-				prv: true,
-				next: true,
+				currentMonth: new Date().getMonth() + 1,
+					showPrevious: true,
+				showNext: true,
 				// 判断今天是否已经签到
-				is_day_signin: false,
+				isDaySignedIn: false,
 				// 已经签到的日期
-				already_arr: []
+				alreadySignedDates: []
 			}
 		},
 		mounted() {
@@ -127,34 +129,35 @@
 			// 中英切换
 			if (that.lang != 'zh') that.weekArr = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 			// 今天周几
-			that.weeked = that.weekArr[new Date().getDay()];
-			// 签到功能
-			if (that.type != 'calendar') {
-				for (let i in that.dayArr) {
-					that.$set(that.dayArr[i], 'flag', false);
-				}
-			}
+			that.currentWeek = that.weekArr[new Date().getDay()];
 		},
 		methods: {
+			// 获取所有已签到日期的时间戳
+			getAllSignedTimestamps() {
+				return [...this.already, ...this.alreadySignedDates];
+			},
 			setAlready(days) {
-				this.already_arr = days;
+				this.alreadySignedDates = days;
 				this.getAlready();
 			},
 			// 渲染已经签到的日期
 			getAlready() {
-				for (let i in this.dayArr) {
-					if(this.already.indexOf(new Date(this.dayArr[i].date).getTime()) == -1 && this.already_arr.indexOf(new Date(this.dayArr[i].date).getTime()) == -1) {
-						console.log(this.already_arr.indexOf(new Date(this.dayArr[i].date).getTime()) == -1)
-						this.$set(this.dayArr[i], 'flag', false);
-					}else {
-						this.$set(this.dayArr[i], 'flag', true);
-						if(this.dayArr[i].date == this.localDate) {
-							// 今天已经签到了
-							this.is_day_signin = true;
+				const signedTimestamps = this.getAllSignedTimestamps();
+				this.isDaySignedIn = false;
+				
+				this.dayArr.forEach(day => {
+					if (day.date) {
+						const dayTimestamp = new Date(day.date).getTime();
+						day.flag = signedTimestamps.includes(dayTimestamp);
+						
+						// 检查今日是否已签到
+						if (day.date === this.localDate && day.flag) {
+							this.isDaySignedIn = true;
 						}
+					} else {
+						day.flag = false;
 					}
-				}
-				console.log(this.dayArr)
+				});
 			},
 			// 补签触发的方法
 			shift() {
@@ -175,9 +178,9 @@
 					// 已经签到后不能签到
 					return false
 				}
-				this.$set(this.dayArr[index], 'flag', true);
+				this.dayArr[index].flag = true;
 				this.$emit('change', obj.date);
-				this.is_day_signin = true;
+				this.isDaySignedIn = true;
 				uni.showToast({
 					title: '已签到',
 					icon: 'success'
@@ -202,122 +205,133 @@
 						if(that.day > obj.day && !that.supplementary) {
 							return
 						}
-						console.log(obj.day);
-						uni.showToast({
+							uni.showToast({
 							title: that.day > obj.day ? '补签成功' : '签到成功',
 							icon: 'success'
 						});
-						that.$set(that.dayArr[index], 'flag', true);
+						that.dayArr[index].flag = true;
 						that.$emit('change', obj.date);
 					}
 				}
 			},
 			// 初始化日期
 			initDate() {
-				let that = this;
-				that.dayArr = [];
-				// 当前月总天数
-				let totalDay = new Date(that.year, that.month, 0).getDate();
-				// 遍历总天数将日期逐个添加至数组
-				for (let i = 1; i <= totalDay; i++) {
-					// 得到需补充天数
-					let value = (new Date(that.year, that.month - 1, i)).getDay();
-					// 补充前面空白日期
-					if (i == 1 && value != 0) {
-						that.addBefore(value);
-						that.aheadDay = value;
-					}
-					// 添加本月日期
-					let obj = {};
-					obj.date = that.year + '-' + that.formatNum(that.month) + '-' + that.formatNum(i);
-					obj.day = i;
-					that.dayArr.push(obj);
-					// 补充后面空白日期
-					if (i == totalDay && value != 6) that.addAfter(value);
-				}
-				
-				// 解决月份切换后，已签到部分不显示的问题（感谢社区网友提供的方案 @w的多多）
+				this.dayArr = this.generateCalendarDays();
 				this.getAlready();
 			},
-			// 补充前面空白日期
-			addBefore(value) {
-				let that = this;
-				let totalDay = new Date(that.year, that.month - 1, 0).getDate();
-				for (let i = 0; i < value; i++) {
-					let obj = {};
-					obj.date = '';
-					obj.day = totalDay - (value - i) + 1;
-					that.dayArr.push(obj);
+			// 生成日历数据
+			generateCalendarDays() {
+				const days = [];
+				const totalDays = new Date(this.year, this.month, 0).getDate();
+				const firstDayOfWeek = new Date(this.year, this.month - 1, 1).getDay();
+				const lastMonthDays = new Date(this.year, this.month - 1, 0).getDate();
+				
+				this.aheadDay = firstDayOfWeek;
+				
+				// 添加上月的空白日期
+				for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+					days.push({
+						date: '',
+						day: lastMonthDays - i,
+						flag: false
+					});
 				}
-			},
-			// 补充后空白日期
-			addAfter(value) {
-				let that = this;
-				for (let i = 0; i < (6 - value); i++) {
-					let obj = {};
-					obj.date = '';
-					obj.day = i + 1;
-					that.dayArr.push(obj);
+				
+				// 添加当月日期
+				for (let i = 1; i <= totalDays; i++) {
+					days.push({
+						date: `${this.year}-${this.formatNum(this.month)}-${this.formatNum(i)}`,
+						day: i,
+						flag: false
+					});
 				}
+				
+				// 添加下月的空白日期
+				const lastDayOfWeek = new Date(this.year, this.month - 1, totalDays).getDay();
+				if (lastDayOfWeek !== 6) {
+					for (let i = 1; i <= 6 - lastDayOfWeek; i++) {
+						days.push({
+							date: '',
+							day: i,
+							flag: false
+						});
+					}
+				}
+				
+				return days;
 			},
 			// 格式化日期位数
 			formatNum(num) {
 				return num < 10 ? ('0' + num) : num;
 			},
+			// 更新上下月按钮显示状态
+			updateMonthNavigation() {
+				const currentDate = new Date();
+				const currentYear = currentDate.getFullYear();
+				const currentMonth = currentDate.getMonth() + 1;
+				
+				this.showPrevious = this.year >= currentYear || this.month > currentMonth + 1;
+				this.showNext = this.year <= currentYear || this.month < currentMonth;
+			},
 			// 上一个月
 			lastMonth() {
-				let that = this;
-				if (that.month == 1) {
-					that.year -= 1;
-					that.month = 12;
+				if (this.month == 1) {
+					this.year -= 1;
+					this.month = 12;
 				} else {
-					that.month -= 1;
+					this.month -= 1;
 				}
 				
-				that.initDate();
-				if(this.year >= new Date().getFullYear() || this.month > new Date().getMonth() + 2) {
-					this.prv = true
-				}else {
-					this.prv = false
-				}
-				
-				if(this.year <= new Date().getFullYear() || this.month < new Date().getMonth() ) {
-					this.next = true
-				}else {
-					this.next = false
-				}
-				
-				
-				
+				this.initDate();
+				this.updateMonthNavigation();
 			},
 			// 下一个月
 			nextMonth() {
-				let that = this;
-				if (that.month == 12) {
-					that.year += 1;
-					that.month = 1;
+				if (this.month == 12) {
+					this.year += 1;
+					this.month = 1;
 				} else {
-					that.month += 1;
-				}
-				that.initDate();
-				
-				if(this.year >= new Date().getFullYear() || this.month > new Date().getMonth() + 2) {
-					this.prv = true
-				}else {
-					this.prv = false
+					this.month += 1;
 				}
 				
-				if(this.year <= new Date().getFullYear() || this.month < new Date().getMonth() ) {
-					this.next = true
-				}else {
-					this.next = false
-				}
+				this.initDate();
+				this.updateMonthNavigation();
 			}
 		}
 	}
 </script>
 
 <style scoped>
+	/* CSS变量 - 浅色主题 */
+	.calendar-box {
+		--bg-primary: #FFFFFF;
+		--bg-secondary: #FFFFFF;
+		--text-primary: #333333;
+		--text-secondary: #666666;
+		--text-disabled: #999999;
+		--date-text: #333333;
+		--theme-color: #FF871E;
+		--theme-border: #FF871E;
+		--button-text: #FFFFFF;
+		--supplement-bg: transparent;
+		--supplement-border: #FF871E;
+	}
+	
+	/* CSS变量 - 暗色主题 */
+	.calendar-box.dark-theme {
+		--bg-primary: #1a1a1a;
+		--bg-secondary: #2d2d2d;
+		--text-primary: #ffffff;
+		--text-secondary: #e0e0e0;
+		--text-disabled: #999999;
+		--date-text: #ffffff;
+		--theme-color: #ffc470;
+		--theme-border: #ffc470;
+		--button-text: #ffffff;
+		--supplement-bg: rgba(255, 196, 112, 0.1);
+		--supplement-border: rgba(255, 196, 112, 0.3);
+	}
+	
 	.calendar-box {
 		width: 100%;
 		flex-direction: column;
@@ -330,7 +344,7 @@
 		width: 100%;
 		padding: 20rpx 40rpx;
 		box-sizing: border-box;
-		background-color: #FFFFFF;
+		background-color: var(--bg-primary);
 		border-radius: 25rpx;
 	}
 	
@@ -357,6 +371,7 @@
 	.month {
 		margin: 30rpx 0;
 		position: relative;
+		color: var(--text-primary);
 	}
 	
 	.picker {
@@ -380,14 +395,15 @@
 		text-align: center;
 		position: relative;
 		line-height: 70rpx;
+		color: var(--date-text);
 	}
 	
 	.checkday {
-		color: #999;
+		color: var(--text-disabled);
 	}
 	
 	.choose {
-		color: #FFFFFF;
+		color: var(--button-text);
 		border-radius: 50%;
 	}
 	
@@ -402,11 +418,11 @@
 	}
 	
 	.sign {
-		background-color: #FFF;
+		background-color: var(--bg-primary);
 	}
 	
 	.repair {
-		background-color: #FFF;
+		background-color: var(--bg-primary);
 	}
 	
 	.but {
@@ -422,7 +438,7 @@
 		border-radius: 30rpx;
 		border: 1px solid transparent;
 		outline: none;
-		color: #FFFFFF;
+		color: var(--button-text);
 		font-size: 32rpx;
 	}
 	uni-button:after {
@@ -435,7 +451,7 @@
 		justify-content: space-between;
 		padding: 30rpx;
 		box-sizing: border-box;
-		background-color: #FFFFFF;
+		background-color: var(--bg-secondary);
 		border-radius: 20rpx;
 		margin-bottom: 16rpx;
 		align-items: center;
@@ -444,9 +460,10 @@
 		font-weight: 600;
 		font-size: 36rpx;
 		line-height: 50rpx;
+		color: var(--text-primary);
 	}
 	.top h4 span {
-		color: #FF871E;;
+		color: var(--theme-color);;
 		margin: 0 10rpx;
 		font-size: 32rpx
 	}
@@ -455,20 +472,22 @@
 		font-weight: normal;
 		font-size: 28rpx;
 		line-height: 40rpx;
-		color: #FF871E;
+		color: var(--theme-color);
 	}
 	
-	.rig span {
+	.right span {
 		font-style: normal;
 		font-weight: normal;
 		font-size: 24rpx;
 		line-height: 48rpx;
-		color: #FF871E;
-		border: 1px solid #FF871E;
+		color: var(--theme-color);
+		border: 1px solid var(--supplement-border);
+		background: var(--supplement-bg);
 		padding: 10rpx 20rpx;
 		border-radius: 32rpx;
+		transition: background-color 0.2s ease;
 	}
-	.month .prv {
+	.month .previous {
 		min-width: 35px;
 	}
 </style>

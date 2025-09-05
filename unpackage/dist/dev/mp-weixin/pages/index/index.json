@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "uni-app",
+  "usingComponents": {
+    "youlan-sign-in": "/components/youlan-SignIn/youlan-SignIn"
+  }
+}
